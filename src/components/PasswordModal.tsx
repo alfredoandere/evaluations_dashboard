@@ -36,39 +36,35 @@ export default function PasswordModal({ onAuthenticated }: PasswordModalProps) {
     }
   };
 
-  // Don't render anything while checking localStorage
   if (isChecking) {
     return null;
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-surface border border-border rounded-lg p-6 w-80 shadow-2xl">
-        <h2 className="text-lg font-mono font-bold text-text-main mb-4 text-center">
-          🔒 EVALS_BIO_2.0
+    <div className="fixed inset-0 bg-background flex items-center justify-center">
+      <div className="bg-surface border border-border rounded-lg p-6 w-72">
+        <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-6 text-center">
+          EVALS_BIO_2.0
         </h2>
-        <p className="text-text-muted text-sm mb-4 text-center">
-          Enter password to access dashboard
-        </p>
         <form onSubmit={handleSubmit}>
           <input
             ref={inputRef}
             type="password"
             placeholder="Password"
-            className={`w-full px-3 py-2 bg-background border rounded font-mono text-sm text-text-main placeholder:text-text-dim focus:outline-none focus:ring-2 focus:ring-primary/50 ${
+            className={`w-full px-3 py-2 bg-background border rounded font-mono text-sm text-text-main placeholder:text-text-dim focus:outline-none focus:border-text-muted ${
               error ? 'border-red-500' : 'border-border'
             }`}
             autoFocus
             onChange={() => setError(false)}
           />
           {error && (
-            <p className="text-red-500 text-xs mt-2 text-center">
+            <p className="text-red-500 text-[10px] font-mono mt-2 text-center">
               Incorrect password
             </p>
           )}
           <button
             type="submit"
-            className="w-full mt-4 px-4 py-2 bg-primary text-white font-mono text-sm rounded hover:bg-primary/90 transition-colors"
+            className="w-full mt-4 px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
           >
             Enter
           </button>
@@ -78,12 +74,10 @@ export default function PasswordModal({ onAuthenticated }: PasswordModalProps) {
   );
 }
 
-// Helper to check auth status (for use elsewhere if needed)
 export function isAuthenticated(): boolean {
   return localStorage.getItem(STORAGE_KEY) === 'authenticated';
 }
 
-// Helper to logout (for use elsewhere if needed)
 export function logout(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
