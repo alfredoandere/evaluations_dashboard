@@ -74,22 +74,22 @@ export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }
       
       <div className="overflow-auto flex-1 custom-scrollbar w-full">
         {/* Header Row */}
-        <div className="sticky top-0 z-10 bg-surfaceHighlight border-b border-border text-[9px] uppercase tracking-wider font-mono text-text-muted flex px-2 py-2 gap-2">
+        <div className="sticky top-0 z-10 bg-surfaceHighlight border-b border-border text-[9px] uppercase tracking-wider font-mono text-text-muted flex px-2 py-2">
           <div className="w-6 text-center shrink-0">#</div>
           <div 
-            className="w-28 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0"
+            className="w-28 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0 mr-4"
             onClick={() => handleSort('name')}
           >
             ENGINEER <SortIcon field="name" />
           </div>
           <div 
-            className="w-14 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0"
+            className="w-16 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0"
             onClick={() => handleSort('problemsAccepted')}
           >
             ACCEPTED <SortIcon field="problemsAccepted" />
           </div>
           <div 
-            className="flex-1 cursor-pointer hover:bg-white/5 select-none group flex items-center"
+            className="flex-1 cursor-pointer hover:bg-white/5 select-none group flex items-center justify-end text-right"
             onClick={() => handleSort('lastSubmitted')}
           >
             LAST SUB <SortIcon field="lastSubmitted" />
@@ -104,7 +104,7 @@ export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }
             return (
               <div 
                 key={engineer.name} 
-                className="flex items-center px-2 py-1.5 hover:bg-surfaceHighlight/30 transition-colors duration-75 gap-2"
+                className="flex items-center px-2 py-1.5 hover:bg-surfaceHighlight/30 transition-colors duration-75"
               >
                 {/* Rank # */}
                 <div className="w-6 shrink-0 flex justify-center">
@@ -116,7 +116,7 @@ export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }
                 </div>
 
                 {/* Engineer Name */}
-                <div className="w-28 shrink-0 whitespace-nowrap overflow-hidden">
+                <div className="w-28 shrink-0 whitespace-nowrap overflow-hidden mr-4">
                   <span className={`font-medium font-mono text-[10px] truncate block ${isTop3 ? 'text-text-main' : 'text-text-muted'}`}>
                      {engineer.name}
                      {isTop3 && <span className="ml-1 text-[8px] text-yellow-500">★</span>}
@@ -124,12 +124,12 @@ export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }
                 </div>
 
                 {/* Accepted Count */}
-                <div className="w-14 shrink-0">
+                <div className="w-16 shrink-0">
                   <span className="font-mono font-bold text-[10px] text-text-main">{engineer.problemsAccepted}</span>
                 </div>
 
                 {/* Last Submitted */}
-                <div className="flex-1">
+                <div className="flex-1 text-right">
                   <span className="font-mono text-text-dim text-[9px]">
                     {formatDate(engineer.lastSubmitted)}
                   </span>
