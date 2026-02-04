@@ -69,7 +69,7 @@ function parseCSV(csvText: string): CSVRow[] {
       row[header.trim()] = values[index]?.trim() || '';
     });
     
-    rows.push(row as CSVRow);
+    rows.push(row as unknown as CSVRow);
   }
   
   return rows;
