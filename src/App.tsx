@@ -14,6 +14,7 @@ function App() {
   const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch GitHub Action sync status
   useEffect(() => {
@@ -111,6 +112,45 @@ function App() {
     return `${diffHours}h ago`;
   };
 
+  // Trigger GitHub Action manually
+  const triggerSync = async () => {
+    const token = import.meta.env.VITE_GITHUB_TOKEN;
+    if (!token) {
+      alert('GitHub token not configured');
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      const response = await fetch(
+        'https://api.github.com/repos/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml/dispatches',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          body: JSON.stringify({ ref: 'main' }),
+        }
+      );
+      
+      if (response.status === 204) {
+        // Workflow triggered successfully - wait a bit then reload data
+        setTimeout(() => {
+          window.location.reload();
+        }, 30000); // Reload after 30 seconds to give workflow time to complete
+      } else {
+        alert(`Failed to trigger sync: ${response.status}`);
+        setIsSyncing(false);
+      }
+    } catch (error) {
+      console.error('Failed to trigger sync:', error);
+      alert('Failed to trigger sync');
+      setIsSyncing(false);
+    }
+  };
+
   // Filter problems by status
   const qcProblems = problems.filter(p => p.status === 'qc');
   const reviewedProblems = problems.filter(p => p.status === 'accepted' || p.status === 'rejected');
@@ -142,9 +182,21 @@ function App() {
             </h1>
          </div>
          
-         <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></span>
-            <span className="text-[9px] font-mono text-text-dim">synced {formatSyncTime()}</span>
+         <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+               <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-500/70'}`}></span>
+               <span className="text-[9px] font-mono text-text-dim">
+                  {isSyncing ? 'syncing...' : `synced ${formatSyncTime()}`}
+               </span>
+            </div>
+            <button
+               onClick={triggerSync}
+               disabled={isSyncing}
+               className="text-[9px] font-mono text-text-dim hover:text-text-main disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+               title="Trigger manual sync"
+            >
+               ↻
+            </button>
          </div>
       </div>
 
