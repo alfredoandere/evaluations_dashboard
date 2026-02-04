@@ -13,7 +13,29 @@ function App() {
   const [engineers, setEngineers] = useState<Engineer[]>(initialEngineers);
   const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const [, setTick] = useState(0); // Force re-render for time updates
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Fetch GitHub Action sync status
+  useEffect(() => {
+    const fetchSyncStatus = async () => {
+      try {
+        const response = await fetch('/sync-status.json');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.lastSync) {
+            setLastSyncTime(new Date(data.lastSync));
+          }
+        }
+      } catch {
+        // Ignore errors - sync status is optional
+      }
+    };
+    
+    fetchSyncStatus();
+    // Refresh sync status every 5 minutes
+    const intervalId = setInterval(fetchSyncStatus, 5 * 60 * 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleAuthenticated = useCallback(() => {
     setIsAuthenticated(true);
@@ -58,7 +80,6 @@ function App() {
       loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
         setProblems(loadedProblems);
         setEngineers(loadedEngineers);
-        setLastSyncTime(new Date());
       });
     };
     
@@ -71,19 +92,18 @@ function App() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Update time display every minute
+  // Update current time every 30 seconds for sync display
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setTick(t => t + 1);
-    }, 60000); // Update every minute
+      setCurrentTime(new Date());
+    }, 30000); // Update every 30 seconds
     return () => clearInterval(intervalId);
   }, []);
 
-  // Format last sync time
-  const formatSyncTime = (date: Date | null): string => {
-    if (!date) return 'syncing...';
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+  // Format last sync time relative to current time
+  const formatSyncTime = (): string => {
+    if (!lastSyncTime) return 'syncing...';
+    const diffMs = currentTime.getTime() - lastSyncTime.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return 'just now';
     if (diffMins < 60) return `${diffMins}m ago`;
@@ -124,7 +144,7 @@ function App() {
          
          <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></span>
-            <span className="text-[9px] font-mono text-text-dim">synced {formatSyncTime(lastSyncTime)}</span>
+            <span className="text-[9px] font-mono text-text-dim">synced {formatSyncTime()}</span>
          </div>
       </div>
 
