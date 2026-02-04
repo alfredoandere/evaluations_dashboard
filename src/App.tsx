@@ -112,14 +112,17 @@ function App() {
     return `${diffHours}h ago`;
   };
 
-  // Trigger GitHub Action manually
+  // Trigger GitHub Action manually or open GitHub Actions page
   const triggerSync = async () => {
     const token = import.meta.env.VITE_GITHUB_TOKEN;
+    
+    // In production (no token), open GitHub Actions page
     if (!token) {
-      alert('GitHub token not configured');
+      window.open('https://github.com/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml', '_blank');
       return;
     }
     
+    // In dev mode, trigger via API
     setIsSyncing(true);
     try {
       const response = await fetch(
