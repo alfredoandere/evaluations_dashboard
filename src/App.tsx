@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Leaderboard from './components/Leaderboard';
 import ProblemTable from './components/ProblemTable';
 import PasswordModal from './components/PasswordModal';
-import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, type Problem, type Engineer } from './data/mockData';
+import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, TOTAL_ORDERS, type Problem, type Engineer } from './data/mockData';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -12,6 +12,8 @@ function App() {
   const [problems, setProblems] = useState<Problem[]>(initialProblems);
   const [engineers, setEngineers] = useState<Engineer[]>(initialEngineers);
   const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [, setTick] = useState(0); // Force re-render for time updates
 
   const handleAuthenticated = useCallback(() => {
     setIsAuthenticated(true);
@@ -50,13 +52,44 @@ function App() {
     setManualTheme(isCurrentlyLight ? 'dark' : 'light');
   };
 
-  // Load data from CSV on mount
+  // Load data from CSV on mount and refresh every 30 minutes
   useEffect(() => {
-    loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
-      setProblems(loadedProblems);
-      setEngineers(loadedEngineers);
-    });
+    const fetchData = () => {
+      loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
+        setProblems(loadedProblems);
+        setEngineers(loadedEngineers);
+        setLastSyncTime(new Date());
+      });
+    };
+    
+    // Initial load
+    fetchData();
+    
+    // Refresh every 30 minutes (30 * 60 * 1000 = 1,800,000 ms)
+    const intervalId = setInterval(fetchData, 30 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
   }, []);
+
+  // Update time display every minute
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTick(t => t + 1);
+    }, 60000); // Update every minute
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Format last sync time
+  const formatSyncTime = (date: Date | null): string => {
+    if (!date) return 'syncing...';
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    return `${diffHours}h ago`;
+  };
 
   // Filter problems by status
   const qcProblems = problems.filter(p => p.status === 'qc');
@@ -89,11 +122,9 @@ function App() {
             </h1>
          </div>
          
-         <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-               <span className="text-[9px] font-bold text-text-dim uppercase tracking-wider">Total Contributors</span>
-               <span className="font-mono font-bold text-sm text-text-main">{engineers.length}</span>
-            </div>
+         <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/70"></span>
+            <span className="text-[9px] font-mono text-text-dim">synced {formatSyncTime(lastSyncTime)}</span>
          </div>
       </div>
 
@@ -154,7 +185,7 @@ function App() {
          <div className="flex flex-col h-full">
             <Leaderboard 
               engineers={engineers} 
-              acceptanceRate={stats.acceptanceRate} 
+              totalOrders={TOTAL_ORDERS}
               totalAccepted={stats.acceptedCount} 
             />
          </div>

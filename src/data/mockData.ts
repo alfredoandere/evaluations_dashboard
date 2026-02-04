@@ -1,6 +1,17 @@
-// Data Source: Ops RL Submissions CSV
-// Fetched at runtime from /submissions.csv
+// Data Source: Latch Internal Evals Submissions CSV
+// Fetched at runtime from GitHub: https://github.com/latchbio/latch-internal-evals/blob/main/submissions.csv
 // ============================================================================
+
+// Use GitHub API for private repo access (handles CORS properly)
+const GITHUB_API_URL = 'https://api.github.com/repos/latchbio/latch-internal-evals/contents/submissions.csv?ref=main';
+
+// GitHub token for private repo access - set via VITE_GITHUB_TOKEN env variable
+// In production, the CSV is synced via GitHub Action, so no token needed
+const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const IS_DEV = import.meta.env.DEV;
+
+// Total orders from sales team (update manually)
+export const TOTAL_ORDERS = 20;
 
 export type ProblemStatus = 'qc' | 'accepted' | 'rejected';
 
@@ -163,19 +174,47 @@ export function getStats() {
   };
 }
 
-// Async function to fetch and reload data from CSV
+// Async function to fetch and reload data from GitHub CSV
 export async function loadData(): Promise<{ problems: Problem[]; engineers: Engineer[] }> {
   try {
-    const response = await fetch('/submissions.csv');
-    const csvText = await response.text();
-    const rows = parseCSV(csvText);
+    let csvText: string;
     
+    // In dev mode with token: fetch directly from GitHub API
+    // In production: use local CSV (synced by GitHub Action)
+    if (IS_DEV && GITHUB_TOKEN) {
+      const fetchOptions: RequestInit = {
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+        },
+      };
+      
+      const response = await fetch(GITHUB_API_URL, fetchOptions);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSV from GitHub API: ${response.status}`);
+      }
+      csvText = await response.text();
+      console.log('Loaded data from GitHub (dev mode, authenticated)');
+    } else {
+      // Production: use local CSV file (kept in sync by GitHub Action)
+      const response = await fetch('/submissions.csv');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch local CSV: ${response.status}`);
+      }
+      csvText = await response.text();
+      console.log('Loaded data from local CSV file');
+    }
+    
+    const rows = parseCSV(csvText);
     problems = transformToProblems(rows);
     engineers = buildEngineers(problems);
     
+    console.log(`Loaded ${problems.length} problems`);
     return { problems, engineers };
   } catch (error) {
     console.error('Failed to load CSV data:', error);
+    // Fall back to hardcoded initial data
     return { problems: initialProblems, engineers: initialEngineers };
   }
 }

@@ -6,7 +6,7 @@ type SortDirection = 'asc' | 'desc';
 
 interface LeaderboardProps {
   engineers: Engineer[];
-  acceptanceRate: number;
+  totalOrders: number;
   totalAccepted: number;
 }
 
@@ -17,7 +17,7 @@ const formatDate = (date: Date): string => {
   return `${month}/${day}`;
 };
 
-export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }: LeaderboardProps) {
+export default function Leaderboard({ engineers, totalOrders, totalAccepted }: LeaderboardProps) {
   const [sortField, setSortField] = useState<SortField>('problemsAccepted');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -61,14 +61,22 @@ export default function Leaderboard({ engineers, acceptanceRate, totalAccepted }
                <span className="text-yellow-500">★</span> LEADERBOARD
             </h3>
             <span className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim">
-               {acceptanceRate}% RATE
+               {totalOrders} ORDERS
             </span>
          </div>
-         <div className="flex items-end gap-2">
-            <span className="text-3xl font-mono font-bold text-text-main leading-none">
-               {totalAccepted}
-            </span>
-            <span className="text-[9px] font-mono text-text-dim mb-1">COMPLETED</span>
+         <div className="flex items-end justify-between">
+            <div className="flex items-end gap-2">
+               <span className="text-3xl font-mono font-bold text-text-main leading-none">
+                  {totalAccepted}
+               </span>
+               <span className="text-[9px] font-mono text-text-dim mb-1">COMPLETED</span>
+            </div>
+            <div className="flex items-end gap-1.5">
+               <span className="text-lg font-mono font-bold text-text-muted leading-none">
+                  {engineers.length}
+               </span>
+               <span className="text-[8px] font-mono text-text-dim mb-0.5">CONTRIBUTORS</span>
+            </div>
          </div>
       </div>
       
