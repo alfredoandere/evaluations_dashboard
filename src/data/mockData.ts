@@ -2,13 +2,15 @@
 // Fetched at runtime from GitHub: https://github.com/latchbio/latch-internal-evals/blob/main/submissions.csv
 // ============================================================================
 
-// Use GitHub API for private repo access (handles CORS properly)
+// Use GitHub API for private repo access in dev mode
 const GITHUB_API_URL = 'https://api.github.com/repos/latchbio/latch-internal-evals/contents/submissions.csv?ref=main';
 
 // GitHub token for private repo access - set via VITE_GITHUB_TOKEN env variable
-// In production, the CSV is synced via GitHub Action, so no token needed
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
 const IS_DEV = import.meta.env.DEV;
+
+// Cloudflare R2 public URL for production runtime fetching
+const R2_BASE_URL = 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev';
 
 // Total orders from sales team (update manually)
 export const TOTAL_ORDERS = 20;
@@ -85,10 +87,10 @@ function parseDate(dateStr: string): Date {
 // Transform CSV rows to Problem objects
 function transformToProblems(rows: CSVRow[]): Problem[] {
   return rows
-    .filter(row => row.id && row.data_accession) // Filter out empty rows
+    .filter(row => row.id) // Filter out rows without id
     .map(row => ({
       id: parseInt(row.id, 10),
-      title: row.data_accession,
+      title: row.data_accession || `#${row.id}`,
       description: row.title || '',
       paperUrl: row.paper_url,
       kit: row.kit,
@@ -180,7 +182,7 @@ export async function loadData(): Promise<{ problems: Problem[]; engineers: Engi
     let csvText: string;
     
     // In dev mode with token: fetch directly from GitHub API
-    // In production: use local CSV (synced by GitHub Action)
+    // In production: fetch from Cloudflare R2 (always up to date)
     if (IS_DEV && GITHUB_TOKEN) {
       const fetchOptions: RequestInit = {
         headers: {
@@ -197,13 +199,13 @@ export async function loadData(): Promise<{ problems: Problem[]; engineers: Engi
       csvText = await response.text();
       console.log('Loaded data from GitHub (dev mode, authenticated)');
     } else {
-      // Production: use local CSV file (kept in sync by GitHub Action)
-      const response = await fetch('/submissions.csv');
+      // Production: fetch from Cloudflare R2 (updated by GitHub Action)
+      const response = await fetch(`${R2_BASE_URL}/submissions.csv`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch local CSV: ${response.status}`);
+        throw new Error(`Failed to fetch CSV from R2: ${response.status}`);
       }
       csvText = await response.text();
-      console.log('Loaded data from local CSV file');
+      console.log('Loaded data from Cloudflare R2');
     }
     
     const rows = parseCSV(csvText);

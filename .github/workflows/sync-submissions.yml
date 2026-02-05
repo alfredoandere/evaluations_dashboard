@@ -29,7 +29,28 @@ jobs:
       - name: Update sync timestamp
         run: |
           echo "{\"lastSync\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/sync-status.json
-      
+
+      - name: Upload to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        run: |
+          # Install AWS CLI (comes pre-installed on ubuntu-latest, but ensure it's available)
+          aws --version
+
+          # Upload submissions.csv to R2
+          aws s3 cp public/submissions.csv s3://evaluations-data/submissions.csv \
+            --endpoint-url "$R2_ENDPOINT" \
+            --content-type "text/csv"
+
+          # Upload sync-status.json to R2
+          aws s3 cp public/sync-status.json s3://evaluations-data/sync-status.json \
+            --endpoint-url "$R2_ENDPOINT" \
+            --content-type "application/json"
+
+          echo "Successfully uploaded files to R2"
+
       - name: Check for changes
         id: check_changes
         run: |

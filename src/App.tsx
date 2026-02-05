@@ -16,11 +16,15 @@ function App() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Fetch GitHub Action sync status
+  // Fetch GitHub Action sync status from R2
   useEffect(() => {
+    const syncStatusUrl = import.meta.env.DEV
+      ? '/sync-status.json'
+      : 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
+
     const fetchSyncStatus = async () => {
       try {
-        const response = await fetch('/sync-status.json');
+        const response = await fetch(syncStatusUrl);
         if (response.ok) {
           const data = await response.json();
           if (data.lastSync) {
