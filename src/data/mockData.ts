@@ -200,7 +200,7 @@ export async function loadData(): Promise<{ problems: Problem[]; engineers: Engi
       console.log('Loaded data from GitHub (dev mode, authenticated)');
     } else {
       // Production: fetch from Cloudflare R2 (updated by GitHub Action)
-      const response = await fetch(`${R2_BASE_URL}/submissions.csv`);
+      const response = await fetch(`${R2_BASE_URL}/submissions.csv?t=${Date.now()}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch CSV from R2: ${response.status}`);
       }

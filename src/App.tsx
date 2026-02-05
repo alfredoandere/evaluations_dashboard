@@ -24,7 +24,8 @@ function App() {
 
     const fetchSyncStatus = async () => {
       try {
-        const response = await fetch(syncStatusUrl);
+        const cacheBust = `?t=${Date.now()}`;
+        const response = await fetch(syncStatusUrl + cacheBust);
         if (response.ok) {
           const data = await response.json();
           if (data.lastSync) {
@@ -37,8 +38,8 @@ function App() {
     };
     
     fetchSyncStatus();
-    // Refresh sync status every 5 minutes
-    const intervalId = setInterval(fetchSyncStatus, 5 * 60 * 1000);
+    // Refresh sync status every minute
+    const intervalId = setInterval(fetchSyncStatus, 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
 
