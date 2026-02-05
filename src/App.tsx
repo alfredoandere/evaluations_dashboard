@@ -4,13 +4,12 @@ import ProblemTable from './components/ProblemTable';
 import PasswordModal from './components/PasswordModal';
 import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, TOTAL_ORDERS, type Problem, type Engineer } from './data/mockData';
 
-const SYNC_STATUS_URL = import.meta.env.DEV
-  ? '/sync-status.json'
-  : 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
+// Always poll R2 for sync status - it's the source of truth (updated by GitHub Action)
+const SYNC_STATUS_URL = 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
 
 const POLL_INTERVAL_NORMAL = 10_000;   // 10 seconds - always watching
 const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
-const FAST_POLL_DURATION = 120_000;    // 2 minutes of fast polling
+const FAST_POLL_DURATION = 90_000;     // 90 seconds of fast polling, then give up
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
