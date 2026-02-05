@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Leaderboard from './components/Leaderboard';
 import ProblemTable from './components/ProblemTable';
 import PasswordModal from './components/PasswordModal';
 import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, TOTAL_ORDERS, type Problem, type Engineer } from './data/mockData';
+
+const SYNC_STATUS_URL = import.meta.env.DEV
+  ? '/sync-status.json'
+  : 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
+
+const POLL_INTERVAL_NORMAL = 10_000;   // 10 seconds - always watching
+const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
+const FAST_POLL_DURATION = 120_000;    // 2 minutes of fast polling
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -15,33 +23,74 @@ function App() {
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
+  const lastKnownSync = useRef<string | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fastPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch GitHub Action sync status from R2
-  useEffect(() => {
-    const syncStatusUrl = import.meta.env.DEV
-      ? '/sync-status.json'
-      : 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
-
-    const fetchSyncStatus = async () => {
-      try {
-        const cacheBust = `?t=${Date.now()}`;
-        const response = await fetch(syncStatusUrl + cacheBust);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.lastSync) {
-            setLastSyncTime(new Date(data.lastSync));
-          }
-        }
-      } catch {
-        // Ignore errors - sync status is optional
-      }
-    };
-    
-    fetchSyncStatus();
-    // Refresh sync status every minute
-    const intervalId = setInterval(fetchSyncStatus, 60 * 1000);
-    return () => clearInterval(intervalId);
+  // Fetch data from source
+  const fetchData = useCallback(() => {
+    loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
+      setProblems(loadedProblems);
+      setEngineers(loadedEngineers);
+    });
   }, []);
+
+  // Fetch sync status and detect changes
+  const fetchSyncStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${SYNC_STATUS_URL}?t=${Date.now()}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.lastSync) {
+          const newSyncTime = data.lastSync;
+          setLastSyncTime(new Date(newSyncTime));
+          setCurrentTime(new Date());
+
+          // Detect if sync time changed -> new data available
+          if (lastKnownSync.current && lastKnownSync.current !== newSyncTime) {
+            console.log(`Sync change detected: ${lastKnownSync.current} -> ${newSyncTime}`);
+            fetchData(); // Re-fetch CSV data immediately
+            setIsSyncing(false);
+          }
+          lastKnownSync.current = newSyncTime;
+        }
+      }
+    } catch {
+      // Ignore errors - sync status is optional
+    }
+  }, [fetchData]);
+
+  // Start polling at a given interval
+  const startPolling = useCallback((interval: number) => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(() => {
+      fetchSyncStatus();
+      setCurrentTime(new Date());
+    }, interval);
+  }, [fetchSyncStatus]);
+
+  // Switch to fast polling temporarily (after manual trigger)
+  const startFastPolling = useCallback(() => {
+    startPolling(POLL_INTERVAL_FAST);
+    // Revert to normal polling after duration
+    if (fastPollTimeoutRef.current) clearTimeout(fastPollTimeoutRef.current);
+    fastPollTimeoutRef.current = setTimeout(() => {
+      startPolling(POLL_INTERVAL_NORMAL);
+      setIsSyncing(false);
+    }, FAST_POLL_DURATION);
+  }, [startPolling]);
+
+  // Initialize: fetch data + sync status, start normal polling
+  useEffect(() => {
+    fetchData();
+    fetchSyncStatus();
+    startPolling(POLL_INTERVAL_NORMAL);
+
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (fastPollTimeoutRef.current) clearTimeout(fastPollTimeoutRef.current);
+    };
+  }, [fetchData, fetchSyncStatus, startPolling]);
 
   const handleAuthenticated = useCallback(() => {
     setIsAuthenticated(true);
@@ -80,36 +129,12 @@ function App() {
     setManualTheme(isCurrentlyLight ? 'dark' : 'light');
   };
 
-  // Load data from CSV on mount and refresh every 30 minutes
-  useEffect(() => {
-    const fetchData = () => {
-      loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
-        setProblems(loadedProblems);
-        setEngineers(loadedEngineers);
-      });
-    };
-    
-    // Initial load
-    fetchData();
-    
-    // Refresh every 30 minutes (30 * 60 * 1000 = 1,800,000 ms)
-    const intervalId = setInterval(fetchData, 30 * 60 * 1000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Update current time every 30 seconds for sync display
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 30000); // Update every 30 seconds
-    return () => clearInterval(intervalId);
-  }, []);
-
   // Format last sync time relative to current time
   const formatSyncTime = (): string => {
-    if (!lastSyncTime) return 'syncing...';
+    if (!lastSyncTime) return 'checking...';
     const diffMs = currentTime.getTime() - lastSyncTime.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    if (diffSecs < 30) return 'just now';
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 1) return 'just now';
     if (diffMins < 60) return `${diffMins}m ago`;
@@ -117,45 +142,35 @@ function App() {
     return `${diffHours}h ago`;
   };
 
-  // Trigger GitHub Action manually or open GitHub Actions page
+  // Trigger sync: enter "watching" mode with fast polling
+  // If user has token (dev), also trigger the GitHub Action via API
+  // Either way, start aggressive polling to detect when R2 updates
   const triggerSync = async () => {
-    const token = import.meta.env.VITE_GITHUB_TOKEN;
-    
-    // In production (no token), open GitHub Actions page
-    if (!token) {
-      window.open('https://github.com/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml', '_blank');
-      return;
-    }
-    
-    // In dev mode, trigger via API
     setIsSyncing(true);
-    try {
-      const response = await fetch(
-        'https://api.github.com/repos/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml/dispatches',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'X-GitHub-Api-Version': '2022-11-28',
-          },
-          body: JSON.stringify({ ref: 'main' }),
-        }
-      );
-      
-      if (response.status === 204) {
-        // Workflow triggered successfully - wait a bit then reload data
-        setTimeout(() => {
-          window.location.reload();
-        }, 30000); // Reload after 30 seconds to give workflow time to complete
-      } else {
-        alert(`Failed to trigger sync: ${response.status}`);
-        setIsSyncing(false);
+    startFastPolling(); // Start polling R2 every 3s to detect the change
+
+    const token = import.meta.env.VITE_GITHUB_TOKEN;
+    if (token) {
+      // Dev mode: trigger workflow via API
+      try {
+        await fetch(
+          'https://api.github.com/repos/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml/dispatches',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'X-GitHub-Api-Version': '2022-11-28',
+            },
+            body: JSON.stringify({ ref: 'main' }),
+          }
+        );
+      } catch (error) {
+        console.error('Failed to trigger sync:', error);
       }
-    } catch (error) {
-      console.error('Failed to trigger sync:', error);
-      alert('Failed to trigger sync');
-      setIsSyncing(false);
+    } else {
+      // Production: open GitHub Actions page for manual trigger
+      window.open('https://github.com/alfredoandere/evaluations_dashboard/actions/workflows/sync-submissions.yml', '_blank');
     }
   };
 
