@@ -40,12 +40,12 @@ jobs:
           aws --version
 
           # Upload submissions.csv to R2
-          aws s3 cp public/submissions.csv s3://evaluations-data/submissions.csv \
+          aws s3 cp public/submissions.csv s3://github-action-upload/submissions.csv \
             --endpoint-url "$R2_ENDPOINT" \
             --content-type "text/csv"
 
           # Upload sync-status.json to R2
-          aws s3 cp public/sync-status.json s3://evaluations-data/sync-status.json \
+          aws s3 cp public/sync-status.json s3://github-action-upload/sync-status.json \
             --endpoint-url "$R2_ENDPOINT" \
             --content-type "application/json"
 
