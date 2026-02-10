@@ -17,6 +17,14 @@ export const TOTAL_ORDERS = 20;
 
 export type ProblemStatus = 'qc' | 'accepted' | 'rejected';
 
+// Normalize status values from CSV to app status
+function normalizeStatus(raw: string): ProblemStatus {
+  const s = raw.trim().toLowerCase();
+  if (s === 'accepted' || s === 'complete' || s === 'completed' || s === 'done') return 'accepted';
+  if (s === 'rejected' || s === 'failed') return 'rejected';
+  return 'qc'; // default: qc, pending, in_review, etc.
+}
+
 export interface Problem {
   id: number;              // CSV id column
   title: string;           // data_accession (e.g., GSE315435)
@@ -95,7 +103,7 @@ function transformToProblems(rows: CSVRow[]): Problem[] {
       paperUrl: row.paper_url,
       kit: row.kit,
       engineer: row.engineer,
-      status: (row.status as ProblemStatus) || 'qc',
+      status: normalizeStatus(row.status),
       submittedAt: parseDate(row.submitted_at),
     }));
 }
