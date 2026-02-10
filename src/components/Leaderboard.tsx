@@ -58,7 +58,7 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
       <div className="p-3 border-b border-border/30 bg-surfaceHighlight/30 shrink-0 h-[88px] flex flex-col justify-between">
          <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
-               <span className="text-yellow-500">★</span> LEADERBOARD
+               <span className="text-yellow-500">★</span> CONTRIBUTIONS
             </h3>
             <span className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim">
                {totalOrders} ORDERS
