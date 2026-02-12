@@ -24,7 +24,7 @@ jobs:
                -H "Accept: application/vnd.github.raw+json" \
                -H "X-GitHub-Api-Version: 2022-11-28" \
                -o public/submissions.csv \
-               "https://api.github.com/repos/latchbio/latch-internal-evals/contents/submissions.csv?ref=main"
+               "https://api.github.com/repos/latchbio/latch-internal-evals/contents/eval_judge/submissions.csv?ref=main"
       
       - name: Update sync timestamp
         run: |

@@ -3,7 +3,7 @@
 // ============================================================================
 
 // Use GitHub API for private repo access in dev mode
-const GITHUB_API_URL = 'https://api.github.com/repos/latchbio/latch-internal-evals/contents/submissions.csv?ref=main';
+const GITHUB_API_URL = 'https://api.github.com/repos/latchbio/latch-internal-evals/contents/eval_judge/submissions.csv?ref=main';
 
 // GitHub token for private repo access - set via VITE_GITHUB_TOKEN env variable
 const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
