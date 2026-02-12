@@ -184,47 +184,48 @@ export function getStats() {
   };
 }
 
-// Async function to fetch and reload data from GitHub CSV
-export async function loadData(): Promise<{ problems: Problem[]; engineers: Engineer[] }> {
+// Track last fetched CSV to avoid unnecessary re-renders
+let lastCSVText: string | null = null;
+
+// Fetch raw CSV text from source
+async function fetchCSVText(): Promise<string> {
+  if (IS_DEV && GITHUB_TOKEN) {
+    const response = await fetch(GITHUB_API_URL, {
+      headers: {
+        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.raw+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (!response.ok) throw new Error(`GitHub API: ${response.status}`);
+    return response.text();
+  } else {
+    const response = await fetch(`${R2_BASE_URL}/submissions.csv?t=${Date.now()}`);
+    if (!response.ok) throw new Error(`R2: ${response.status}`);
+    return response.text();
+  }
+}
+
+// Load data, returns null if nothing changed (same CSV content)
+export async function loadData(): Promise<{ problems: Problem[]; engineers: Engineer[]; changed: boolean }> {
   try {
-    let csvText: string;
-    
-    // In dev mode with token: fetch directly from GitHub API
-    // In production: fetch from Cloudflare R2 (always up to date)
-    if (IS_DEV && GITHUB_TOKEN) {
-      const fetchOptions: RequestInit = {
-        headers: {
-          'Authorization': `Bearer ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.raw+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-        },
-      };
-      
-      const response = await fetch(GITHUB_API_URL, fetchOptions);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV from GitHub API: ${response.status}`);
-      }
-      csvText = await response.text();
-      console.log('Loaded data from GitHub (dev mode, authenticated)');
-    } else {
-      // Production: fetch from Cloudflare R2 (updated by GitHub Action)
-      const response = await fetch(`${R2_BASE_URL}/submissions.csv?t=${Date.now()}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch CSV from R2: ${response.status}`);
-      }
-      csvText = await response.text();
-      console.log('Loaded data from Cloudflare R2');
+    const csvText = await fetchCSVText();
+
+    // Skip re-parse if content hasn't changed
+    if (csvText === lastCSVText) {
+      return { problems, engineers, changed: false };
     }
-    
+
+    lastCSVText = csvText;
     const rows = parseCSV(csvText);
     problems = transformToProblems(rows);
     engineers = buildEngineers(problems);
-    
-    console.log(`Loaded ${problems.length} problems`);
-    return { problems, engineers };
+
+    const source = IS_DEV && GITHUB_TOKEN ? 'GitHub' : 'R2';
+    console.log(`[${source}] ${problems.length} problems loaded`);
+    return { problems, engineers, changed: true };
   } catch (error) {
     console.error('Failed to load CSV data:', error);
-    // Fall back to hardcoded initial data
-    return { problems: initialProblems, engineers: initialEngineers };
+    return { problems: initialProblems, engineers: initialEngineers, changed: lastCSVText === null };
   }
 }

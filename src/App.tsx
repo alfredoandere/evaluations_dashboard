@@ -26,11 +26,13 @@ function App() {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fastPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fetch data from source
+  // Fetch data — only updates state if CSV content actually changed
   const fetchData = useCallback(() => {
-    loadData().then(({ problems: loadedProblems, engineers: loadedEngineers }) => {
-      setProblems(loadedProblems);
-      setEngineers(loadedEngineers);
+    loadData().then(({ problems: loadedProblems, engineers: loadedEngineers, changed }) => {
+      if (changed) {
+        setProblems(loadedProblems);
+        setEngineers(loadedEngineers);
+      }
     });
   }, []);
 
@@ -48,7 +50,6 @@ function App() {
           // Detect if sync time changed -> new data available
           if (lastKnownSync.current && lastKnownSync.current !== newSyncTime) {
             console.log(`Sync change detected: ${lastKnownSync.current} -> ${newSyncTime}`);
-            fetchData(); // Re-fetch CSV data immediately
             setIsSyncing(false);
           }
           lastKnownSync.current = newSyncTime;
@@ -57,7 +58,7 @@ function App() {
     } catch {
       // Ignore errors - sync status is optional
     }
-  }, [fetchData]);
+  }, []);
 
   // Start polling at a given interval
   const startPolling = useCallback((interval: number) => {
@@ -79,13 +80,17 @@ function App() {
     }, FAST_POLL_DURATION);
   }, [startPolling]);
 
-  // Initialize: fetch data + sync status, start normal polling
+  // Initialize: fetch data + sync status, start polling
   useEffect(() => {
     fetchData();
     fetchSyncStatus();
     startPolling(POLL_INTERVAL_NORMAL);
 
+    // Poll CSV data every 30 seconds (only updates UI if content changed)
+    const dataInterval = setInterval(fetchData, 30_000);
+
     return () => {
+      clearInterval(dataInterval);
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (fastPollTimeoutRef.current) clearTimeout(fastPollTimeoutRef.current);
     };
