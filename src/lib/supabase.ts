@@ -8,9 +8,15 @@ let supabase: SupabaseClient;
 if (supabaseUrl && supabaseAnonKey) {
   supabase = createClient(supabaseUrl, supabaseAnonKey);
 } else {
-  console.error('Missing Supabase environment variables. Check your .env file.');
+  console.warn('Missing Supabase environment variables. Auth disabled.');
+  const noopResult = {
+    data: { session: null, subscription: { unsubscribe: () => {} }, user: null },
+    error: null,
+    then: (fn: (v: unknown) => unknown) => Promise.resolve(fn({ data: { session: null }, error: null })),
+  };
   const handler: ProxyHandler<object> = {
-    get: () => new Proxy(() => Promise.resolve({ data: { session: null, subscription: { unsubscribe: () => {} } }, error: null }), handler),
+    get: () => new Proxy(() => noopResult, handler),
+    apply: () => noopResult,
   };
   supabase = new Proxy({} as unknown as SupabaseClient, handler) as SupabaseClient;
 }
