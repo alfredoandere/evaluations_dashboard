@@ -157,7 +157,7 @@ function GuidePage() {
             
             {/* ===== HERO / COVER ===== */}
             <div className="mb-20">
-              <LatchLogo className="w-10 h-10 text-[#1d4ed8] mb-16" />
+              <LatchLogo className="w-14 h-14 text-[#1d4ed8] mb-16" />
               <h1 className="text-5xl font-bold text-[#1d4ed8] leading-[1.15] tracking-tight mb-3">
                 Spatial Biology<br />Problems
               </h1>

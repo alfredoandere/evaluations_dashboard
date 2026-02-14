@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Leaderboard from '../components/Leaderboard';
 import ProblemTable from '../components/ProblemTable';
-import PasswordModal from '../components/PasswordModal';
+
 import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, TOTAL_ORDERS, type Problem, type Engineer } from '../data/mockData';
 
 // Always poll R2 for sync status - it's the source of truth (updated by GitHub Action)
@@ -12,10 +12,6 @@ const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
 const FAST_POLL_DURATION = 90_000;     // 90 seconds of fast polling, then give up
 
 function DashboardPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check localStorage immediately to avoid flash
-    return localStorage.getItem('eval_dashboard_auth') === 'authenticated';
-  });
   const [problems, setProblems] = useState<Problem[]>(initialProblems);
   const [engineers, setEngineers] = useState<Engineer[]>(initialEngineers);
   const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
@@ -95,10 +91,6 @@ function DashboardPage() {
       if (fastPollTimeoutRef.current) clearTimeout(fastPollTimeoutRef.current);
     };
   }, [fetchData, fetchSyncStatus, startPolling]);
-
-  const handleAuthenticated = useCallback(() => {
-    setIsAuthenticated(true);
-  }, []);
 
   // Use system preference for dark/light mode, but allow manual override
   useEffect(() => {
@@ -184,15 +176,6 @@ function DashboardPage() {
 
   // Calculate stats
   const stats = getStats();
-
-  // Show password modal if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="h-screen w-screen bg-background">
-        <PasswordModal onAuthenticated={handleAuthenticated} />
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen w-screen bg-background text-text-main overflow-hidden font-sans selection:bg-primary/20 flex flex-col">
