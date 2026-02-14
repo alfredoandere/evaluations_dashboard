@@ -35,10 +35,10 @@ function AuthPage() {
       <div className="h-screen w-screen bg-background flex items-center justify-center">
         <div className="bg-surface border border-border rounded-lg p-6 w-80 text-center">
           <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-4">
-            ACCOUNT CREATED
+            CHECK YOUR EMAIL
           </h2>
           <p className="text-sm text-text-muted mb-4">
-            You can now sign in with your credentials.
+            A verification link has been sent to your email. Please verify your email before signing in.
           </p>
           <button
             onClick={() => { setSignupSuccess(false); setMode('signin'); setPassword(''); }}

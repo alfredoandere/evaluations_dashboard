@@ -4,7 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import GuidePage from './pages/GuidePage';
 import AuthPage from './pages/AuthPage';
 
-const ALLOWED_DOMAINS = ['latchbio.com', 'openai.com'];
+const ALLOWED_DOMAINS = ['latch.bio', 'openai.com', 'anthropic.com'];
 
 function App() {
   const { user, isLoading, signOut } = useAuth();
@@ -47,6 +47,40 @@ function App() {
           >
             Sign Out
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isEmailVerified = !!user.email_confirmed_at;
+
+  if (!isEmailVerified) {
+    return (
+      <div className="h-screen w-screen bg-background flex items-center justify-center">
+        <div className="bg-surface border border-border rounded-lg p-6 w-96 text-center">
+          <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-4">
+            EMAIL NOT VERIFIED
+          </h2>
+          <p className="text-sm text-text-muted mb-2">
+            <span className="text-text-main font-medium">{userEmail}</span>
+          </p>
+          <p className="text-xs text-text-dim mb-6">
+            Check your inbox for a verification link. You must verify your email before accessing the dashboard.
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
+            >
+              I've Verified — Refresh
+            </button>
+            <button
+              onClick={() => signOut()}
+              className="w-full px-4 py-2 text-text-dim font-mono text-xs hover:text-text-muted transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     );

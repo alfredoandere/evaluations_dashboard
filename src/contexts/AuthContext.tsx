@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+const ALLOWED_DOMAINS = ['latch.bio', 'openai.com', 'anthropic.com'];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -39,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string) => {
+    const domain = email.split('@')[1]?.toLowerCase();
+    if (!domain || !ALLOWED_DOMAINS.includes(domain)) {
+      return { error: `Only ${ALLOWED_DOMAINS.join(', ')} email addresses are allowed.` };
+    }
     const { error } = await supabase.auth.signUp({ email, password });
     return { error: error?.message ?? null };
   };
