@@ -1,15 +1,14 @@
-import { useAuth0 } from '@auth0/auth0-react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
 import DashboardPage from './pages/DashboardPage';
 import GuidePage from './pages/GuidePage';
+import AuthPage from './pages/AuthPage';
 
-// Whitelisted email domains — add more as needed
 const ALLOWED_DOMAINS = ['latchbio.com', 'openai.com'];
 
 function App() {
-  const { isAuthenticated, isLoading, user, loginWithRedirect, logout, error } = useAuth0();
+  const { user, isLoading, signOut } = useAuth();
 
-  // Loading state (Auth0 SDK initializing or processing callback)
   if (isLoading) {
     return (
       <div className="h-screen w-screen bg-background flex items-center justify-center">
@@ -21,47 +20,11 @@ function App() {
     );
   }
 
-  // Auth0 error
-  if (error) {
-    return (
-      <div className="h-screen w-screen bg-background flex items-center justify-center">
-        <div className="bg-surface border border-border rounded-lg p-6 w-80 text-center">
-          <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-4">
-            AUTHENTICATION ERROR
-          </h2>
-          <p className="text-sm text-red-400 mb-4">{error.message}</p>
-          <button
-            onClick={() => loginWithRedirect()}
-            className="w-full mt-2 px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return <AuthPage />;
   }
 
-  // Not authenticated — show login prompt
-  if (!isAuthenticated) {
-    return (
-      <div className="h-screen w-screen bg-background flex items-center justify-center">
-        <div className="bg-surface border border-border rounded-lg p-6 w-72 text-center">
-          <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-6">
-            EVALS_BIO_2.0
-          </h2>
-          <button
-            onClick={() => loginWithRedirect()}
-            className="w-full px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
-          >
-            Sign In
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Check email domain whitelist
-  const userEmail = user?.email || '';
+  const userEmail = user.email || '';
   const userDomain = userEmail.split('@')[1]?.toLowerCase();
   const isAllowedDomain = ALLOWED_DOMAINS.includes(userDomain);
 
@@ -79,7 +42,7 @@ function App() {
             Only accounts from whitelisted domains can access this dashboard.
           </p>
           <button
-            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+            onClick={() => signOut()}
             className="w-full px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
           >
             Sign Out
