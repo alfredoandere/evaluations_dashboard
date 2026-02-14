@@ -52,7 +52,8 @@ function App() {
     );
   }
 
-  const isEmailVerified = !!user.email_confirmed_at;
+  const isOAuthUser = user.app_metadata?.provider !== 'email';
+  const isEmailVerified = isOAuthUser || !!user.email_confirmed_at;
 
   if (!isEmailVerified) {
     return (
