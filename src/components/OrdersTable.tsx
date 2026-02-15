@@ -85,7 +85,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
               <th className="px-1.5 py-2 font-semibold w-8 text-center">#</th>
               <th className="px-1.5 py-2 font-semibold w-16">PARTNER</th>
               <th className="px-1.5 py-2 font-semibold w-12">SIZE</th>
-              <th className="px-1.5 py-2 font-semibold">DUE</th>
+              <th className="pl-1.5 pr-5 py-2 font-semibold text-right">DUE</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
@@ -111,7 +111,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
                 <td className="px-1.5 py-3 whitespace-nowrap">
                   <span className="font-mono font-bold text-text-main">{order.problemCount}</span>
                 </td>
-                <td className="px-1.5 py-3 whitespace-nowrap">
+                <td className="pl-1.5 pr-5 py-3 whitespace-nowrap text-right">
                   <span className="font-mono text-text-dim text-[9px]">
                     {formatDate(order.dueDate)}
                   </span>

@@ -143,7 +143,7 @@ export default function Leaderboard({ engineers, totalOrders: _totalOrders, tota
             ACCEPTED <SortIcon field="problemsAccepted" />
           </div>
           <div 
-            className="flex-1 cursor-pointer hover:bg-white/5 select-none group flex items-center justify-end text-right"
+            className="flex-1 cursor-pointer hover:bg-white/5 select-none group flex items-center justify-end text-right pr-3"
             onClick={() => handleSort('lastSubmitted')}
           >
             LAST SUB <SortIcon field="lastSubmitted" />
@@ -182,7 +182,7 @@ export default function Leaderboard({ engineers, totalOrders: _totalOrders, tota
                 </div>
 
                 {/* Last Submitted */}
-                <div className="flex-1 text-right">
+                <div className="flex-1 text-right pr-4">
                   <span className="font-mono text-text-dim text-[9px]">
                     {formatDate(engineer.lastSubmitted)}
                   </span>
