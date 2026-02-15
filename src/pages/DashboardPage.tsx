@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Leaderboard from '../components/Leaderboard';
 import ProblemTable from '../components/ProblemTable';
+import OrdersTable from '../components/OrdersTable';
 
 import { problems as initialProblems, engineers as initialEngineers, loadData, getStats, TOTAL_ORDERS, type Problem, type Engineer } from '../data/mockData';
+import { orders } from '../data/orders';
 
 // Always poll R2 for sync status - it's the source of truth (updated by GitHub Action)
 const SYNC_STATUS_URL = 'https://pub-cc67e139b4bc48d08ecda05c9046c36f.r2.dev/sync-status.json';
@@ -11,16 +13,70 @@ const POLL_INTERVAL_NORMAL = 10_000;   // 10 seconds - always watching
 const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
 const FAST_POLL_DURATION = 90_000;     // 90 seconds of fast polling, then give up
 
+// Week 1 starts Monday Feb 10, 2026
+const WEEK_ONE_START = new Date(2026, 1, 10); // Feb 10, 2026 (Monday)
+const PRICE_PER_PROBLEM = 10_000;
+const FULL_ACCESS_KEY = 'evals_full_access';
+
+function getCurrentWeek(): number {
+  const now = new Date();
+  const diffMs = now.getTime() - WEEK_ONE_START.getTime();
+  return Math.max(1, Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1);
+}
+
+function getRevenueWeekRange(): { start: Date; end: Date; label: string } {
+  const currentWeek = getCurrentWeek();
+  if (currentWeek === 1) {
+    // Week 1 exception: show current week's data (no previous week exists)
+    const end = new Date(WEEK_ONE_START.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+    return { start: WEEK_ONE_START, end, label: 'this week' };
+  }
+  // Week 2+: show last week's data
+  const lastWeekStart = new Date(WEEK_ONE_START.getTime() + (currentWeek - 2) * 7 * 24 * 60 * 60 * 1000);
+  const lastWeekEnd = new Date(lastWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  return { start: lastWeekStart, end: lastWeekEnd, label: 'last week' };
+}
+
+function formatCurrency(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toLocaleString()}`;
+}
+
 function DashboardPage() {
   const [problems, setProblems] = useState<Problem[]>(initialProblems);
   const [engineers, setEngineers] = useState<Engineer[]>(initialEngineers);
   const [manualTheme, setManualTheme] = useState<'light' | 'dark' | null>(null);
+  const [problemFilter, setProblemFilter] = useState<'qc' | 'reviewed' | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSyncing, setIsSyncing] = useState(false);
   const lastKnownSync = useRef<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fastPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Full access mode (persisted)
+  const [fullAccess, setFullAccess] = useState(() => {
+    return localStorage.getItem(FULL_ACCESS_KEY) === 'true';
+  });
+
+  const toggleFullAccess = () => {
+    const next = !fullAccess;
+    setFullAccess(next);
+    if (next) localStorage.setItem(FULL_ACCESS_KEY, 'true');
+    else localStorage.removeItem(FULL_ACCESS_KEY);
+  };
+
+  // Revenue calculations
+  const currentWeek = getCurrentWeek();
+  const { start: revStart, end: revEnd, label: revLabel } = getRevenueWeekRange();
+  const reviewedProblemsAll = problems.filter(p => p.status === 'accepted' || p.status === 'rejected');
+  const revenueProblems = reviewedProblemsAll.filter(p => {
+    const d = p.doneAt || p.submittedAt;
+    return d >= revStart && d <= revEnd;
+  });
+  const weekRevenue = revenueProblems.length * PRICE_PER_PROBLEM;
+  const yearlyRunRate = weekRevenue * 52;
 
   // Fetch data — only updates state if CSV content actually changed
   const fetchData = useCallback(() => {
@@ -181,18 +237,23 @@ function DashboardPage() {
     <div className="h-screen w-screen bg-background text-text-main overflow-hidden font-sans selection:bg-primary/20 flex flex-col">
       
       {/* Header Bar */}
-      <div className="h-10 border-b border-border bg-surface/30 px-4 flex items-center justify-between shrink-0">
-         <div className="flex items-center gap-6">
+      <div className="h-10 border-b border-border bg-surface/30 px-4 flex items-center shrink-0 relative">
+         <div className="flex items-center gap-4">
             <h1 
               onClick={toggleTheme}
               className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted hover:text-text-main cursor-pointer transition-colors select-none"
               title="Click to toggle theme"
             >
-               EVALS_BIO_2.0
+               EVALS_BIO
             </h1>
          </div>
+
+         {/* Week - centered absolutely */}
+         <span className="absolute left-1/2 -translate-x-1/2 text-xs font-mono font-bold text-text-muted tracking-[0.2em]">
+            WEEK {currentWeek}
+         </span>
          
-         <div className="flex items-center gap-3">
+         <div className="flex items-center gap-3 ml-auto">
             <div className="flex items-center gap-2">
                <span className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-yellow-500 animate-pulse' : 'bg-emerald-500/70'}`}></span>
                <span className="text-[9px] font-mono text-text-dim">
@@ -213,54 +274,63 @@ function DashboardPage() {
       {/* Main Content Grid: 3 Equal Columns */}
       <div className="flex-1 min-h-0 p-4 grid grid-cols-3 gap-4">
          
-         {/* Column 1: Under Review (QC) */}
-         <div className="flex flex-col h-full bg-surface/20 rounded-lg border border-border/30 overflow-hidden">
-            {/* Header */}
-            <div className="p-3 border-b border-border/30 bg-surfaceHighlight/30 shrink-0 h-[88px] flex flex-col justify-between">
-               <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                     UNDER REVIEW
-                  </h3>
-                  <span className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim">
-                     PENDING
-                  </span>
-               </div>
-               <div className="flex items-end gap-2">
-                  <span className="text-3xl font-mono font-bold text-text-main leading-none">
-                     {qcProblems.length}
-                  </span>
-                  <span className="text-[9px] font-mono text-text-dim mb-1">PROBLEMS</span>
-               </div>
-            </div>
-            
-            {/* List */}
-            <ProblemTable problems={qcProblems} />
+         {/* Column 1: Orders */}
+         <div className="flex flex-col h-full">
+            <OrdersTable orders={orders} />
          </div>
 
-         {/* Column 2: Reviewed (Accepted/Rejected) */}
+         {/* Column 2: Problems (merged table with split header) */}
          <div className="flex flex-col h-full bg-surface/20 rounded-lg border border-border/30 overflow-hidden">
-            {/* Header */}
-            <div className="p-3 border-b border-border/30 bg-surfaceHighlight/30 shrink-0 h-[88px] flex flex-col justify-between">
-               <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                     REVIEWED
-                  </h3>
-                  <span className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim">
-                     {stats.acceptanceRate}% ACCEPTED
-                  </span>
+            {/* Split Header */}
+            <div className="border-b border-border/30 bg-surfaceHighlight/30 shrink-0 h-[88px] flex">
+               {/* Left: Under Review (clickable) */}
+               <div
+                  onClick={() => setProblemFilter(problemFilter === 'qc' ? null : 'qc')}
+                  className={`flex-1 p-3 flex flex-col justify-between border-r border-border/30 cursor-pointer transition-colors ${
+                     problemFilter === 'qc' ? 'bg-blue-500/10' : 'hover:bg-white/5'
+                  }`}
+               >
+                  <div className="flex items-center">
+                     <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        UNDER REVIEW
+                     </h3>
+                  </div>
+                  <div className="flex items-end gap-2">
+                     <span className="text-3xl font-mono font-bold text-text-main leading-none">
+                        {qcProblems.length}
+                     </span>
+                     <span className="text-[9px] font-mono text-text-dim mb-1">PROBLEMS</span>
+                  </div>
                </div>
-               <div className="flex items-end gap-2">
-                  <span className="text-3xl font-mono font-bold text-text-main leading-none">
-                     {reviewedProblems.length}
-                  </span>
-                  <span className="text-[9px] font-mono text-text-dim mb-1">PROBLEMS</span>
+               {/* Right: Reviewed (clickable) */}
+               <div
+                  onClick={() => setProblemFilter(problemFilter === 'reviewed' ? null : 'reviewed')}
+                  className={`flex-1 p-3 flex flex-col justify-between cursor-pointer transition-colors ${
+                     problemFilter === 'reviewed' ? 'bg-emerald-500/10' : 'hover:bg-white/5'
+                  }`}
+               >
+                  <div className="flex items-center">
+                     <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        REVIEWED
+                     </h3>
+                  </div>
+                  <div className="flex items-end gap-2">
+                     <span className="text-3xl font-mono font-bold text-text-main leading-none">
+                        {reviewedProblems.length}
+                     </span>
+                     <span className="text-[9px] font-mono text-text-dim mb-1">PROBLEMS</span>
+                  </div>
                </div>
             </div>
             
-            {/* List */}
-            <ProblemTable problems={reviewedProblems} showExamplesWhenEmpty={true} />
+            {/* Combined table — filtered by header click */}
+            <ProblemTable problems={
+              problemFilter === 'qc' ? qcProblems :
+              problemFilter === 'reviewed' ? reviewedProblems :
+              problems
+            } />
          </div>
 
          {/* Column 3: Leaderboard */}
@@ -268,7 +338,13 @@ function DashboardPage() {
             <Leaderboard 
               engineers={engineers} 
               totalOrders={TOTAL_ORDERS}
-              totalAccepted={stats.acceptedCount} 
+              totalAccepted={stats.acceptedCount}
+              fullAccess={fullAccess}
+              onToggleFullAccess={toggleFullAccess}
+              revenueProblemsCount={revenueProblems.length}
+              revenueLabel={revLabel}
+              weekRevenue={formatCurrency(weekRevenue)}
+              yearlyRunRate={formatCurrency(yearlyRunRate)}
             />
          </div>
 

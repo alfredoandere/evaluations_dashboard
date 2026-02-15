@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { Engineer } from '../data/mockData';
 
 type SortField = 'name' | 'problemsAccepted' | 'lastSubmitted';
@@ -8,6 +8,12 @@ interface LeaderboardProps {
   engineers: Engineer[];
   totalOrders: number;
   totalAccepted: number;
+  fullAccess?: boolean;
+  onToggleFullAccess?: () => void;
+  revenueProblemsCount?: number;
+  revenueLabel?: string;
+  weekRevenue?: string;
+  yearlyRunRate?: string;
 }
 
 // Format date as "01/28"
@@ -17,7 +23,29 @@ const formatDate = (date: Date): string => {
   return `${month}/${day}`;
 };
 
-export default function Leaderboard({ engineers, totalOrders, totalAccepted }: LeaderboardProps) {
+export default function Leaderboard({ engineers, totalOrders: _totalOrders, totalAccepted, fullAccess, onToggleFullAccess, revenueProblemsCount, revenueLabel, weekRevenue, yearlyRunRate }: LeaderboardProps) {
+  void _totalOrders;
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleContributorsClick = () => {
+    if (fullAccess) {
+      // Already active: 1 click to deactivate
+      onToggleFullAccess?.();
+      clickCountRef.current = 0;
+      return;
+    }
+    clickCountRef.current++;
+    if (clickCountRef.current >= 3) {
+      onToggleFullAccess?.();
+      clickCountRef.current = 0;
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      return;
+    }
+    // Reset count after 1 second of no clicks
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => { clickCountRef.current = 0; }, 1000);
+  };
   const [sortField, setSortField] = useState<SortField>('problemsAccepted');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -41,10 +69,9 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
     });
   }, [engineers, sortField, sortDirection]);
 
-  // Top 3 based on accepted problems
-  const top3Names = useMemo(() => {
-     const ranked = [...engineers].sort((a, b) => b.problemsAccepted - a.problemsAccepted);
-     return ranked.slice(0, 3).map(e => e.name);
+  // Engineers with at least 1 accepted problem get gold treatment
+  const activatedNames = useMemo(() => {
+     return new Set(engineers.filter(e => e.problemsAccepted > 0).map(e => e.name));
   }, [engineers]);
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -60,8 +87,11 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
             <h3 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                <span className="text-yellow-500">★</span> CONTRIBUTIONS
             </h3>
-            <span className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim">
-               {totalOrders} ORDERS
+            <span
+               onClick={handleContributorsClick}
+               className="text-[10px] font-mono bg-surface border border-border px-1.5 rounded text-text-dim select-none"
+            >
+               {engineers.filter(e => e.problemsAccepted > 0).length} CONTRIBUTORS
             </span>
          </div>
          <div className="flex items-end justify-between">
@@ -71,12 +101,28 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
                </span>
                <span className="text-[9px] font-mono text-text-dim mb-1">COMPLETED</span>
             </div>
-            <div className="flex items-end gap-1.5">
-               <span className="text-lg font-mono font-bold text-text-muted leading-none">
-                  {engineers.length}
-               </span>
-               <span className="text-[8px] font-mono text-text-dim mb-0.5">CONTRIBUTORS</span>
-            </div>
+            {fullAccess && (
+              <>
+                <div className="flex items-end gap-1.5">
+                   <span className="text-lg font-mono font-bold text-text-muted leading-none">
+                      {revenueProblemsCount}
+                   </span>
+                   <span className="text-[8px] font-mono text-text-dim mb-0.5 uppercase">{revenueLabel}</span>
+                </div>
+                <div className="flex items-end gap-1.5">
+                   <span className="text-lg font-mono font-bold text-text-muted leading-none">
+                      {weekRevenue}
+                   </span>
+                   <span className="text-[8px] font-mono text-text-dim mb-0.5">REVENUE</span>
+                </div>
+                <div className="flex items-end gap-1.5">
+                   <span className="text-lg font-mono font-bold text-text-muted leading-none">
+                      {yearlyRunRate}
+                   </span>
+                   <span className="text-[8px] font-mono text-text-dim mb-0.5">RUN RATE</span>
+                </div>
+              </>
+            )}
          </div>
       </div>
       
@@ -85,7 +131,7 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
         <div className="sticky top-0 z-10 bg-surfaceHighlight border-b border-border text-[9px] uppercase tracking-wider font-mono text-text-muted flex px-2 py-2">
           <div className="w-6 text-center shrink-0">#</div>
           <div 
-            className="w-28 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0 mr-4"
+            className="w-28 cursor-pointer hover:bg-white/5 select-none group flex items-center shrink-0 ml-3 mr-4"
             onClick={() => handleSort('name')}
           >
             ENGINEER <SortIcon field="name" />
@@ -107,7 +153,7 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
         {/* Data Rows */}
         <div className="divide-y divide-border/30">
           {sortedEngineers.map((engineer, index) => {
-            const isTop3 = top3Names.includes(engineer.name);
+            const isActivated = activatedNames.has(engineer.name);
             
             return (
               <div 
@@ -117,17 +163,16 @@ export default function Leaderboard({ engineers, totalOrders, totalAccepted }: L
                 {/* Rank # */}
                 <div className="w-6 shrink-0 flex justify-center">
                   <div className={`h-5 w-5 rounded flex items-center justify-center text-[9px] font-mono font-bold transition-colors ${
-                     isTop3 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' : 'bg-surfaceHighlight border border-border text-text-muted'
+                     isActivated ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50' : 'bg-surfaceHighlight border border-border text-text-muted'
                   }`}>
                     {index + 1}
                   </div>
                 </div>
 
                 {/* Engineer Name */}
-                <div className="w-28 shrink-0 whitespace-nowrap overflow-hidden mr-4">
-                  <span className={`font-medium font-mono text-[10px] truncate block ${isTop3 ? 'text-text-main' : 'text-text-muted'}`}>
+                <div className="w-28 shrink-0 whitespace-nowrap overflow-hidden ml-3 mr-4">
+                  <span className="font-medium font-mono text-[10px] truncate block text-text-muted">
                      {engineer.name}
-                     {isTop3 && <span className="ml-1 text-[8px] text-yellow-500">★</span>}
                   </span>
                 </div>
 

@@ -37,6 +37,7 @@ const exampleProblems: Problem[] = [
     engineer: 'Example Engineer',
     status: 'accepted',
     submittedAt: new Date(),
+    doneAt: null,
   },
   {
     id: 0,
@@ -47,6 +48,7 @@ const exampleProblems: Problem[] = [
     engineer: 'Example Engineer',
     status: 'rejected',
     submittedAt: new Date(),
+    doneAt: null,
   },
 ];
 

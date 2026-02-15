@@ -34,6 +34,7 @@ export interface Problem {
   engineer: string;        // engineer column
   status: ProblemStatus;   // qc, accepted, or rejected
   submittedAt: Date;       // submitted_at column
+  doneAt: Date | null;     // done_at column (when accepted/rejected)
 }
 
 export interface Engineer {
@@ -105,7 +106,9 @@ function transformToProblems(rows: CSVRow[]): Problem[] {
       engineer: row.engineer,
       status: normalizeStatus(row.status),
       submittedAt: parseDate(row.submitted_at),
-    }));
+      doneAt: row.done_at ? parseDate(row.done_at) : null,
+    }))
+    .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()); // Most recent first
 }
 
 // Build engineer list from problems
