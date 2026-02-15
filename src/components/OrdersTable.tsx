@@ -21,7 +21,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
   const displayOrders = filter === 'delivered' ? completedOrders : orders;
 
   return (
-    <div className="h-full flex flex-col bg-surface/10 w-full rounded-lg border border-border/30 overflow-hidden">
+    <div className="h-full flex flex-col bg-surface/20 w-full rounded-lg border border-border/30 overflow-hidden">
       {/* Split Header */}
       <div className="border-b border-border/30 bg-surfaceHighlight/30 shrink-0 h-[88px] flex">
         {/* Left: Orders */}
