@@ -108,7 +108,12 @@ function transformToProblems(rows: CSVRow[]): Problem[] {
       submittedAt: parseDate(row.submitted_at),
       doneAt: row.done_at ? parseDate(row.done_at) : null,
     }))
-    .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime()); // Most recent first
+    .sort((a, b) => {
+      // Most recent submitted first; if same date, highest ID first (lowest at bottom)
+      const dateDiff = b.submittedAt.getTime() - a.submittedAt.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return b.id - a.id;
+    });
 }
 
 // Build engineer list from problems
