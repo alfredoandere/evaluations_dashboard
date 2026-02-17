@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from '
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
-const ALLOWED_DOMAINS = ['latch.bio', 'openai.com', 'anthropic.com'];
+const ALLOWED_DOMAINS = ['latch.bio'];
 
 interface AuthContextType {
   user: User | null;

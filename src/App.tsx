@@ -4,7 +4,7 @@ import DashboardPage from './pages/DashboardPage';
 import GuidePage from './pages/GuidePage';
 import AuthPage from './pages/AuthPage';
 
-const ALLOWED_DOMAINS = ['latch.bio', 'openai.com', 'anthropic.com'];
+const ALLOWED_DOMAINS = ['latch.bio'];
 
 function App() {
   const { user, isLoading, signOut } = useAuth();
