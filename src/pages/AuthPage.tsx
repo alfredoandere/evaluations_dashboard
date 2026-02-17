@@ -1,28 +1,26 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const BYPASS_PASSWORD = 'SuperStrongPassword9000';
+const BYPASS_EMAIL = 'admin@latch.bio';
 
-interface AuthPageProps {
-  onPasswordBypass?: () => void;
-}
-
-function AuthPage({ onPasswordBypass }: AuthPageProps) {
-  const { signInWithGoogle } = useAuth();
+function AuthPage() {
+  const { signInWithGoogle, signIn } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState(false);
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === BYPASS_PASSWORD) {
-      onPasswordBypass?.();
-    } else {
+    setPasswordError(false);
+    setLoading(true);
+    const result = await signIn(BYPASS_EMAIL, password);
+    if (result.error) {
       setPasswordError(true);
       setPassword('');
     }
+    setLoading(false);
   };
 
   return (
@@ -58,9 +56,10 @@ function AuthPage({ onPasswordBypass }: AuthPageProps) {
             )}
             <button
               type="submit"
-              className="w-full mt-3 px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
+              disabled={loading}
+              className="w-full mt-3 px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors disabled:opacity-50"
             >
-              Enter
+              {loading ? '...' : 'Enter'}
             </button>
           </form>
         )}
