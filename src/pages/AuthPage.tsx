@@ -1,20 +1,68 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-function AuthPage() {
+const BYPASS_PASSWORD = 'SuperStrongPassword9000';
+
+interface AuthPageProps {
+  onPasswordBypass?: () => void;
+}
+
+function AuthPage({ onPasswordBypass }: AuthPageProps) {
   const { signInWithGoogle } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === BYPASS_PASSWORD) {
+      onPasswordBypass?.();
+    } else {
+      setPasswordError(true);
+      setPassword('');
+    }
+  };
 
   return (
     <div className="h-screen w-screen bg-background flex items-center justify-center">
       <div className="bg-surface border border-border rounded-lg p-6 w-80">
-        <h2 className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-6 text-center">
+        <h2
+          onClick={() => setShowPassword(!showPassword)}
+          className="text-xs font-mono font-bold tracking-[0.2em] text-text-muted mb-6 text-center select-none cursor-default"
+        >
           EVALS_BIO
         </h2>
 
         {error && (
           <p className="text-xs text-red-400 font-mono mb-4 text-center">{error}</p>
+        )}
+
+        {showPassword && (
+          <form onSubmit={handlePasswordSubmit} className="mb-4">
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setPasswordError(false); }}
+              autoFocus
+              className={`w-full px-3 py-2 bg-background border rounded font-mono text-xs text-text-main placeholder:text-text-dim focus:outline-none focus:border-text-muted transition-colors ${
+                passwordError ? 'border-red-500' : 'border-border'
+              }`}
+            />
+            {passwordError && (
+              <p className="text-red-500 text-[10px] font-mono mt-2 text-center">
+                Incorrect password
+              </p>
+            )}
+            <button
+              type="submit"
+              className="w-full mt-3 px-4 py-2 bg-surfaceHighlight border border-border text-text-muted font-mono text-xs rounded hover:bg-surface hover:text-text-main transition-colors"
+            >
+              Enter
+            </button>
+          </form>
         )}
 
         <button

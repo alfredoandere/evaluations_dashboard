@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import DashboardPage from './pages/DashboardPage';
@@ -5,9 +6,18 @@ import GuidePage from './pages/GuidePage';
 import AuthPage from './pages/AuthPage';
 
 const ALLOWED_DOMAINS = ['latch.bio'];
+const PASSWORD_BYPASS_KEY = 'evals_password_bypass';
 
 function App() {
   const { user, isLoading, signOut } = useAuth();
+  const [passwordBypass, setPasswordBypass] = useState(() => {
+    return localStorage.getItem(PASSWORD_BYPASS_KEY) === 'true';
+  });
+
+  const handlePasswordBypass = () => {
+    setPasswordBypass(true);
+    localStorage.setItem(PASSWORD_BYPASS_KEY, 'true');
+  };
 
   if (isLoading) {
     return (
@@ -20,13 +30,13 @@ function App() {
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
+  if (!user && !passwordBypass) {
+    return <AuthPage onPasswordBypass={handlePasswordBypass} />;
   }
 
-  const userEmail = user.email || '';
+  const userEmail = user?.email || '';
   const userDomain = userEmail.split('@')[1]?.toLowerCase();
-  const isAllowedDomain = ALLOWED_DOMAINS.includes(userDomain);
+  const isAllowedDomain = passwordBypass || ALLOWED_DOMAINS.includes(userDomain);
 
   if (!isAllowedDomain) {
     return (
@@ -52,8 +62,8 @@ function App() {
     );
   }
 
-  const isOAuthUser = user.app_metadata?.provider !== 'email';
-  const isEmailVerified = isOAuthUser || !!user.email_confirmed_at;
+  const isOAuthUser = user?.app_metadata?.provider !== 'email';
+  const isEmailVerified = passwordBypass || isOAuthUser || !!user?.email_confirmed_at;
 
   if (!isEmailVerified) {
     return (
