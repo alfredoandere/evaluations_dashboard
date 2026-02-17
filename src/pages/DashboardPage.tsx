@@ -13,7 +13,7 @@ const POLL_INTERVAL_NORMAL = 10_000;   // 10 seconds - always watching
 const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
 const FAST_POLL_DURATION = 90_000;     // 90 seconds of fast polling, then give up
 
-// Week 1 starts Monday Feb 10, 2026 (use date-only comparison to avoid timezone issues)
+// Week 1 starts Monday Feb 9, 2026 (use date-only comparison to avoid timezone issues)
 const PRICE_PER_PROBLEM = 10_000;
 const FULL_ACCESS_KEY = 'evals_full_access';
 
@@ -21,7 +21,7 @@ function toDateOnly(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-const WEEK_ONE_START_MS = toDateOnly(new Date(2026, 1, 10));
+const WEEK_ONE_START_MS = toDateOnly(new Date(2026, 1, 9));
 
 function getCurrentWeek(): number {
   const todayMs = toDateOnly(new Date());
