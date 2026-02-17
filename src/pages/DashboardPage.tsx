@@ -13,27 +13,34 @@ const POLL_INTERVAL_NORMAL = 10_000;   // 10 seconds - always watching
 const POLL_INTERVAL_FAST = 3_000;      // 3 seconds - after manual trigger
 const FAST_POLL_DURATION = 90_000;     // 90 seconds of fast polling, then give up
 
-// Week 1 starts Monday Feb 10, 2026
-const WEEK_ONE_START = new Date(2026, 1, 10); // Feb 10, 2026 (Monday)
+// Week 1 starts Monday Feb 10, 2026 (use date-only comparison to avoid timezone issues)
 const PRICE_PER_PROBLEM = 10_000;
 const FULL_ACCESS_KEY = 'evals_full_access';
 
+function toDateOnly(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+const WEEK_ONE_START_MS = toDateOnly(new Date(2026, 1, 10));
+
 function getCurrentWeek(): number {
-  const now = new Date();
-  const diffMs = now.getTime() - WEEK_ONE_START.getTime();
-  return Math.max(1, Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1);
+  const todayMs = toDateOnly(new Date());
+  const diffDays = Math.floor((todayMs - WEEK_ONE_START_MS) / (24 * 60 * 60 * 1000));
+  return Math.max(1, Math.floor(diffDays / 7) + 1);
 }
 
 function getRevenueWeekRange(): { start: Date; end: Date; label: string } {
   const currentWeek = getCurrentWeek();
+  const weekMs = 7 * 24 * 60 * 60 * 1000;
   if (currentWeek === 1) {
     // Week 1 exception: show current week's data (no previous week exists)
-    const end = new Date(WEEK_ONE_START.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
-    return { start: WEEK_ONE_START, end, label: 'this week' };
+    const start = new Date(WEEK_ONE_START_MS);
+    const end = new Date(WEEK_ONE_START_MS + weekMs - 1);
+    return { start, end, label: 'this week' };
   }
   // Week 2+: show last week's data
-  const lastWeekStart = new Date(WEEK_ONE_START.getTime() + (currentWeek - 2) * 7 * 24 * 60 * 60 * 1000);
-  const lastWeekEnd = new Date(lastWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000 - 1);
+  const lastWeekStart = new Date(WEEK_ONE_START_MS + (currentWeek - 2) * weekMs);
+  const lastWeekEnd = new Date(lastWeekStart.getTime() + weekMs - 1);
   return { start: lastWeekStart, end: lastWeekEnd, label: 'last week' };
 }
 
