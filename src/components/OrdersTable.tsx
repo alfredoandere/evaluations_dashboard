@@ -82,10 +82,12 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
         <table className="w-full text-[10px] text-left border-collapse table-fixed">
           <thead className="sticky top-0 z-10 bg-surfaceHighlight border-b border-border text-[9px] uppercase tracking-wider font-mono text-text-muted">
             <tr>
-              <th className="px-1.5 py-2 font-semibold w-8 text-center">#</th>
-              <th className="px-1.5 py-2 font-semibold w-16">PARTNER</th>
-              <th className="px-1.5 py-2 font-semibold w-12">SIZE</th>
-              <th className="pl-1.5 pr-5 py-2 font-semibold text-right">DUE</th>
+              <th className="px-2.5 py-2 font-semibold w-9 text-center">#</th>
+              <th className="px-2.5 py-2 font-semibold">ORDER</th>
+              <th className="px-2.5 py-2 font-semibold">PARTNER</th>
+              <th className="px-2.5 py-2 font-semibold">SIZE</th>
+              <th className="px-2.5 py-2 font-semibold">DUE</th>
+              <th className="pl-2.5 pr-5 py-2 font-semibold text-right">DELIVERED</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
@@ -94,7 +96,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
                 key={order.id}
                 className="group hover:bg-surfaceHighlight/30 transition-colors duration-75"
               >
-                <td className="px-1.5 py-3 text-center">
+                <td className="px-2.5 py-3 text-center">
                   <div className={`h-5 w-5 mx-auto rounded flex items-center justify-center text-[9px] font-mono font-bold ${
                     order.completed
                       ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/50'
@@ -103,17 +105,27 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
                     {order.id}
                   </div>
                 </td>
-                <td className="px-1.5 py-3 whitespace-nowrap">
+                <td className="px-2.5 py-3 whitespace-nowrap">
+                  <span className="font-medium font-mono text-[10px] text-text-muted">
+                    {order.orderName}
+                  </span>
+                </td>
+                <td className="px-2.5 py-3 whitespace-nowrap">
                   <span className="font-semibold font-mono text-xs text-text-main">
                     {order.displayName}
                   </span>
                 </td>
-                <td className="px-1.5 py-3 whitespace-nowrap">
+                <td className="px-2.5 py-3 whitespace-nowrap">
                   <span className="font-mono font-bold text-text-main">{order.problemCount}</span>
                 </td>
-                <td className="pl-1.5 pr-5 py-3 whitespace-nowrap text-right">
+                <td className="px-2.5 py-3 whitespace-nowrap">
                   <span className="font-mono text-text-dim text-[9px]">
                     {formatDate(order.dueDate)}
+                  </span>
+                </td>
+                <td className="pl-2.5 pr-5 py-3 whitespace-nowrap text-right">
+                  <span className="font-mono text-text-dim text-[9px]">
+                    {order.deliveredDate ? formatDate(order.deliveredDate) : '—'}
                   </span>
                 </td>
               </tr>
